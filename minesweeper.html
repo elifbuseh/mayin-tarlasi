@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mayın Tarlası</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+        :root {
+            --bg-color: #2b2e4a;
+            --container-bg: #4f5370;
+            --board-border: #6d6d8d;
+            --cell-covered-bg: linear-gradient(145deg, #a4c4f0, #88a6d4);
+            --cell-covered-border: #88a6d4;
+            --cell-uncovered-bg: #e0e0e0;
+            --cell-uncovered-border: #bbb;
+            --text-color: #f0f0f0;
+            --button-bg: #007bff;
+            --button-hover-bg: #0056b3;
+            --win-color: #4CAF50;
+            --lose-color: #F44336;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            text-align: center;
+            background-color: var(--container-bg);
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2), 0 6px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #fff;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .board {
+            display: grid;
+            border: 3px solid var(--board-border);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 20px 0;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.2);
+        }
+        .cell {
+            width: 40px;
+            height: 40px;
+            background: var(--cell-covered-bg);
+            border: 2px solid var(--cell-covered-border);
+            box-sizing: border-box;
+            font-size: 1.2em;
+            font-weight: 600;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease-in-out;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .cell.uncovered {
+            background-color: var(--cell-uncovered-bg);
+            border-color: var(--cell-uncovered-border);
+            cursor: default;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .cell.uncovered.mine {
+            background-color: var(--lose-color);
+            animation: pulse-mine 0.5s ease-in-out;
+        }
+        .cell.uncovered.mine::before {
+            content: '💣';
+            font-size: 1.5em;
+        }
+        .cell.flag::before {
+            content: '🚩';
+            font-size: 1.2em;
+        }
+        .cell:not(.uncovered):hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.2);
+        }
+        .cell:not(.uncovered):active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .cell.uncovered.empty {
+            background-color: var(--cell-uncovered-bg);
+        }
+        .cell.uncovered.number-1 { color: #0000ff; }
+        .cell.uncovered.number-2 { color: #008000; }
+        .cell.uncovered.number-3 { color: #ff0000; }
+        .cell.uncovered.number-4 { color: #800080; }
+        .cell.uncovered.number-5 { color: #ff8c00; }
+        .cell.uncovered.number-6 { color: #008080; }
+        .cell.uncovered.number-7 { color: #444444; }
+        .cell.uncovered.number-8 { color: #696969; }
+
+        .game-status {
+            font-size: 1.5em;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        .game-status.win {
+            color: var(--win-color);
+        }
+        .game-status.lose {
+            color: var(--lose-color);
+        }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 1em;
+            cursor: pointer;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            background: linear-gradient(45deg, #007bff, #0056b3);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            font-weight: 600;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0,0,0,0.3);
+        }
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        @keyframes pulse-mine {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        .explosion-animation {
+            animation: explode 0.5s forwards;
+            position: relative;
+            z-index: 10;
+        }
+
+        @keyframes explode {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+        .score-display {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-top: 10px;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Mayın Tarlası</h1>
+        <div class="score-display" id="score-display">Puan: 0</div>
+        <div class="game-status" id="status-message"></div>
+        <div class="board" id="board"></div>
+        <div class="controls">
+            <button id="restart-button">Yeniden Başla</button>
+        </div>
+    </div>
+    <script>
+        const board = document.getElementById('board');
+        const statusMessage = document.getElementById('status-message');
+        const restartButton = document.getElementById('restart-button');
+        const scoreDisplay = document.getElementById('score-display');
+
+        const rows = 10;
+        const cols = 10;
+        const mineCount = 15;
+        let cells = [];
+        let mines = new Set();
+        let isGameOver = false;
+        let flagsPlaced = 0;
+        let score = 0;
+
+        function initGame() {
+            board.innerHTML = '';
+            board.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            cells = [];
+            mines = new Set();
+            isGameOver = false;
+            flagsPlaced = 0;
+            score = 0;
+            statusMessage.textContent = '';
+            updateScore();
+            
+            placeMines();
+            createBoard();
+        }
+
+        function placeMines() {
+            while (mines.size < mineCount) {
+                const index = Math.floor(Math.random() * rows * cols);
+                mines.add(index);
+            }
+        }
+
+        function createBoard() {
+            for (let i = 0; i < rows * cols; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                cell.dataset.index = i;
+                cell.dataset.isMine = mines.has(i);
+
+                cell.addEventListener('click', handleLeftClick);
+                cell.addEventListener('contextmenu', handleRightClick);
+
+                cells.push(cell);
+                board.appendChild(cell);
+            }
+        }
+
+        function handleLeftClick(event) {
+            if (isGameOver) return;
+
+            const cell = event.target;
+            if (cell.classList.contains('uncovered') || cell.classList.contains('flag')) return;
+
+            const index = parseInt(cell.dataset.index);
+
+            if (cell.dataset.isMine === 'true') {
+                cell.classList.add('explosion-animation');
+                gameOver(false);
+            } else {
+                const mineCount = countAdjacentMines(index);
+                uncoverCell(cell, mineCount);
+                if (mineCount === 0) {
+                    revealAdjacentCells(index);
+                }
+                checkWin();
+            }
+        }
+
+        function handleRightClick(event) {
+            event.preventDefault();
+            if (isGameOver) return;
+
+            const cell = event.target;
+            if (cell.classList.contains('uncovered')) return;
+
+            if (!cell.classList.contains('flag')) {
+                cell.classList.add('flag');
+                flagsPlaced++;
+            } else {
+                cell.classList.remove('flag');
+                flagsPlaced--;
+            }
+        }
+
+        function countAdjacentMines(index) {
+            let count = 0;
+            const neighbours = getNeighbours(index);
+            neighbours.forEach(nIndex => {
+                if (mines.has(nIndex)) {
+                    count++;
+                }
+            });
+            return count;
+        }
+
+        function getNeighbours(index) {
+            const neighbours = [];
+            const r = Math.floor(index / cols);
+            const c = index % cols;
+
+            for (let i = -1; i <= 1; i++) {
+                for (let j = -1; j <= 1; j++) {
+                    if (i === 0 && j === 0) continue;
+                    const newR = r + i;
+                    const newC = c + j;
+                    if (newR >= 0 && newR < rows && newC >= 0 && newC < cols) {
+                        neighbours.push(newR * cols + newC);
+                    }
+                }
+            }
+            return neighbours;
+        }
+
+        function uncoverCell(cell, mineCount) {
+            cell.classList.add('uncovered');
+            if (mineCount > 0) {
+                cell.textContent = mineCount;
+                cell.classList.add(`number-${mineCount}`);
+                score += mineCount;
+            } else {
+                cell.classList.add('empty');
+            }
+            updateScore();
+        }
+
+        function revealAdjacentCells(index) {
+            const neighbours = getNeighbours(index);
+            neighbours.forEach(nIndex => {
+                const neighbourCell = cells[nIndex];
+                if (!neighbourCell.classList.contains('uncovered')) {
+                    const mineCount = countAdjacentMines(nIndex);
+                    uncoverCell(neighbourCell, mineCount);
+                    if (mineCount === 0) {
+                        revealAdjacentCells(nIndex);
+                    }
+                }
+            });
+        }
+
+        function checkWin() {
+            const uncoveredCells = cells.filter(cell => cell.classList.contains('uncovered'));
+            if (uncoveredCells.length === (rows * cols) - mineCount) {
+                gameOver(true);
+            }
+        }
+
+        function gameOver(isWin) {
+            isGameOver = true;
+            if (isWin) {
+                statusMessage.textContent = 'Tebrikler, kazandınız!';
+                statusMessage.classList.add('win');
+            } else {
+                statusMessage.textContent = 'Mayına bastın! Oyun bitti.';
+                statusMessage.classList.add('lose');
+            }
+            revealAllCells();
+        }
+
+        function revealAllCells() {
+            cells.forEach(cell => {
+                if (cell.dataset.isMine === 'true') {
+                    cell.classList.add('uncovered', 'mine');
+                } else if (!cell.classList.contains('uncovered')) {
+                    const index = parseInt(cell.dataset.index);
+                    const mineCount = countAdjacentMines(index);
+                    if (mineCount > 0) {
+                        cell.textContent = mineCount;
+                        cell.classList.add(`number-${mineCount}`);
+                    } else {
+                        cell.classList.add('empty');
+                    }
+                    cell.classList.add('uncovered');
+                }
+            });
+        }
+
+        function updateScore() {
+            scoreDisplay.textContent = `Puan: ${score}`;
+        }
+
+        restartButton.addEventListener('click', initGame);
+
+        initGame();
+    </script>
+</body>
+</html>
